@@ -1,0 +1,3 @@
+#!/bin/sh
+exec sudo -u "{{user}}" IPFS_PATH=/var/lib/ipfs/go-ipfs /usr/local/bin/ipfs $@
+

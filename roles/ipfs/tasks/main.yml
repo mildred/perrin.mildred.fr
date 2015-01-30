@@ -1,0 +1,13 @@
+---
+- go-install: name=go-ipfs package=github.com/jbenet/go-ipfs/cmd/ipfs
+- apt: name=fuse state=present
+- apt: name=sudo state=present
+- template: src=ipfs-system dest=/usr/local/sbin/ipfs-system mode=0755 owner=root
+- user: name="{{user}}" system=yes home=/var/lib/ipfs createhome=no
+- file: path=/var/lib/ipfs state=directory mode=0755 owner="{{user}}" group="{{user}}"
+#- file: path=/ipfs state=directory mode=0755 owner="{{user}}"
+#- file: path=/ipns state=directory mode=0755 owner="{{user}}"
+- template: src=ipfs.service dest=/usr/local/lib/systemd/system/ipfs.service mode=0644 owner=root
+- shell: ipfs-system init || true
+- command: ipfs-system config Addresses.Gateway /ip6/::/tcp/5002
+- service: name=ipfs enabled=yes state=restarted

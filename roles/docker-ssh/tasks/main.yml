@@ -1,0 +1,8 @@
+---
+- user: name="{{user}}" uid=0 createhome=yes shell=/usr/sbin/nologin home='/home/{{user}}'
+- file: state=directory path='/home/{{user}}/.ssh' mode=0755
+- copy:
+    content: 'command="nsenter --target $(docker inspect --format {{ "{{.State.Pid}}" }} {{name}}) --mount --uts --ipc --net --pid {{shell}}" {{ssh_key}}\n'
+    dest:  '/home/{{user}}/.ssh/authorized_keys'
+    mode:  0644
+    owner: '{{user}}'

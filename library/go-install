@@ -1,0 +1,48 @@
+#!/bin/bash
+
+changed=false
+failed=false
+res_code=0
+msg=Success
+exec 3>&1 >/dev/null 2>&1
+trap 'failed=true res_code=1 msg="Failed at line $LINENO"' ERR
+
+name=
+package=
+update=false
+. "$1"
+: ${name:="$(basename $package)"}
+
+export GOPATH="/usr/local/src/$name"
+STOWDIR="/usr/local/stow/$name"
+
+mkdir -p "$GOPATH"
+cd "$GOPATH"
+
+changed=true
+
+if $update; then
+    getopts=-u
+else
+    getopts=
+fi
+
+go get $getopts "$package"
+go build "$package"
+
+rm -rf "$GOPATH/bin" "$STOWDIR/bin"
+mkdir -p "$STOWDIR/bin"
+ln -s "$STOWDIR/bin" "$GOPATH/bin"
+go install "$package"
+
+cd "$STOWDIR/.."
+stow -R "$name"
+
+cat <<EOF >&3
+{
+    "failed":  $failed,
+    "changed": $changed,
+    "msg":     "$msg"
+}
+EOF
+exit $res_code

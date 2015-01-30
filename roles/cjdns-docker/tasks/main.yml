@@ -1,0 +1,7 @@
+---
+- shell: docker pull mildred/cjdns
+- systemd-docker-service: name='{{name}}'
+- service: name='{{name}}' enabled=yes state=restarted
+- docker-datadir: name='{{name}}' volume=/etc/cjdns file=/cjdroute.conf
+  register: cjdroute_conf
+- file: src='{{cjdroute_conf.file}}' dest='/etc/docker-{{name}}.conf' state=link

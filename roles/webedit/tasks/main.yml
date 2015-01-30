@@ -1,0 +1,4 @@
+---
+- git: repo=https://github.com/mildred/WebEdit.git dest=/usr/local/src/WebEdit
+- command: make -C /usr/local/src/WebEdit root
+- command: ipfs-system add -r /usr/local/src/WebEdit/root
