@@ -2,6 +2,8 @@
 
 echo 'DOCKER_OPTS="-r=false"' > /etc/default/docker
 
+_after=
+
 docker-unit(){
   local name="$1"
   shift
@@ -9,7 +11,8 @@ docker-unit(){
   cat >"$filename" <<EOF
 [Unit]
 Description=Container $name
-After=docker.service
+Requires=docker.io.service
+After=docker.io.service $_after
 
 [Service]
 Restart=always
@@ -17,8 +20,9 @@ ExecStart=/usr/local/bin/docker-start-run $name $@
 ExecStop=/usr/bin/docker stop -t 2 $name
 
 [Install]
-WantedBy=local.target
+WantedBy=multi-user.target
 EOF
+  systemctl daemon-reload
 }
 
 :> /usr/local/bin/docker-start-run
@@ -29,20 +33,35 @@ cat >>/usr/local/bin/docker-start-run <<"EOF"
 name="$1"
 shift
 
-if ! /usr/bin/docker inspect --format="Reusing {{.ID}}" "$name-data" 2>/dev/null; then
+if ! id="$(/usr/bin/docker inspect --format="{{.ID}}" "$name-data" 2>/dev/null)"; then
+  echo "Reusing $id"
   docker run --name "$name-data" --volumes-from "$name-data" --entrypoint /bin/true "$@"
 fi
 
-/usr/bin/docker rm "$name"
-exec /usr/bin/docker run --rm --attach=stdout --attach=stderr --name="$name" --volumes-from="$name-data" "$@"
+/usr/bin/docker rm "$name" 2>/dev/null
+set -x
+exec /usr/bin/docker run --name="$name" --volumes-from="$name-data" --rm --attach=stdout --attach=stderr "$@"
 
 if docker inspect --format="Reusing {{.ID}}" "$name" 2>/dev/null; then
   exec /usr/bin/docker start -a "$name"
 else
-  exec /usr/bin/docker run --attach=stdout --attach=stderr --name="$name" --volumes-from="$name-data" "$@"
+  exec /usr/bin/docker run --name="$name" --volumes-from="$name-data" --attach=stdout --attach=stderr "$@"
 fi
-
 EOF
+
+:> /usr/local/bin/docker-volpath
+chmod +x /usr/local/bin/docker-volpath
+cat >>/usr/local/bin/docker-volpath <<"EOF"
+#!/bin/bash
+name="$1"
+volume="$2"
+res="$(docker inspect -f "{{(index .Volumes \"$volume\")}}" "$name")$3"
+echo "$res"
+EOF
+
+if ! which jq>/dev/null 2>&1; then
+  DEBIAN_FRONTEND=noninteractive apt-get install -y jq
+fi
 
 docker run --rm -v /usr/local/bin:/target jpetazzo/nsenter
 
@@ -83,35 +102,75 @@ docker-ssh(){
   mv /home/$user/.ssh/authorized_keys- /home/$user/.ssh/authorized_keys
 }
 
+dockers-ssh(){
+  local ssh_key="$1"
+  shift
+  for arg in "$@"; do
+    docker-ssh "$arg" "$ssh_key"
+  done
+}
+
+docker-datadir(){
+  local resvar=
+  if [[ "a$1" = "a-to" ]]; then
+    resvar="$2"
+    shift 2
+  fi
+  local name="$1-data"
+  local volume="$2"
+  local res="$(docker inspect -f "{{(index .Volumes \"$volume\")}}" "$name")$3"
+  
+  if [[ -n "$resvar" ]]; then
+    resvar="$res"
+  else
+    echo -n "$res"
+  fi
+}
+
 systemctl-enable-start(){
   systemctl enable "$@"
   systemctl start "$@"
 }
 
+systemctl-disable-stop(){
+  systemctl disable "$@"
+  systemctl stop "$@"
+}
+
 
 name=mildred
 LOCAL_DOMAINS=mildred.fr
+mx_domain_name=perrin.mildred.fr
 ssh_key="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDByLP6c0nvG8itxtyf9ucG6wQG5r6/mwJcPw7aFQb26930zRTOi+PfMjMFBWrhwkFDktlnTBGOvp+bygU4JuipU3pR5BL5o+Lrawd+Uu00kkhxlmkTzP1WYcdpbgBlXutLTuta5Gt4c3e8xUwdcvGHTizKZZZ+BENaOv7j2yfAaJnBJCKcdoI7WCBhuezRWfC2URfVMad/mPxECei/SzGcjhjh1hQiogXH9jwXsrrsU0nuMy8H2LWgqp2nDGFVvqInKC0ICWwDuhpNT21OB0KGdd7LxYdlve/CaMKYRhRMBLmu+grV8akGkmD0uGmF5fVNUOxcRW8PZnCEPiIFvgcv"
 
+(
 docker pull mildred/exim-dovecot-mail
 docker pull mildred/roundcube
 docker pull mildred/varnish
 docker pull mildred/p2pweb
+docker pull mildred/cjdns
+) | grep -v '^$'
 
-docker-unit $name-mail      "-p 4190:4190 -p 25:25 -p 993:993 -p 143:143 -p 465:465 -p 587:587 -e \"LOCAL_DOMAINS=$LOCAL_DOMAINS\" mildred/exim-dovecot-mail"
+docker-unit $name-mail      "-p 4190:4190 -p 25:25 -p 993:993 -p 143:143 -p 465:465 -p 587:587 -h $mx_domain_name -e \"LOCAL_DOMAINS=$LOCAL_DOMAINS\" mildred/exim-dovecot-mail"
+_after=$name-mail.service \
 docker-unit $name-roundcube "-p 4443:443 --link \"$name-mail:mail\" mildred/roundcube"
 docker-unit $name-p2pweb    "-p 8888:8888 -p 0.0.0.0:8888:8888/udp mildred/p2pweb"
 docker-unit $name-varnish   "-p 80:80 --link \"$name-roundcube:webmail\" --link \"$name-p2pweb:p2pweb\" mildred/varnish"
-docker-ssh  $name-mail      "$ssh_key"
-docker-ssh  $name-roundcube "$ssh_key"
-docker-ssh  $name-p2pweb    "$ssh_key"
-docker-ssh  $name-varnish   "$ssh_key"
+docker-unit $name-cjdroute  "--privileged --net=host mildred/cjdns"
+dockers-ssh "$ssh_key" $name-mail $name-roundcube $name-p2pweb $name-varnish $name-cjdroute
 
-systemctl-enable-start $name-mail.service $name-roundcube.service $name-varnish.service $name-p2pweb.service
+systemctl-enable-start $name-mail.service $name-roundcube.service $name-varnish.service $name-cjdroute
+systemctl-disable-stop $name-p2pweb.service
 
-etc_varnish="$(docker inspect -f '{{(index .Volumes "/etc/varnish")}}' $name-varnish-data)"
+etc_varnish="$(docker-datadir $name-varnish /etc/varnish)"
+default_vcl="$(docker-datadir $name-varnish /etc/varnish /default.vcl)"
+cjdroute_conf="$(docker-datadir $name-cjdroute /etc/cjdns /cjdroute.conf)"
 
-cat >$etc_varnish/default.vcl <<"EOF"
+mkdir -p /etc/docker-$name
+ln -sf "etc_varnish" /etc/docker-$name/varnish
+ln -sf "cjdroute_conf" /etc/docker-$name/cjdroute.conf
+
+cat >"$default_vcl" <<"EOF"
 backend webmail {
     .host = "%WEBMAIL_PORT_80_TCP_ADDR%";
     .port = "%WEBMAIL_PORT_80_TCP_PORT%";
@@ -249,6 +308,5 @@ sub vcl_recv {
 EOF
 
 systemctl restart $name-varnish.service
-systemctl restart $name-p2pweb.service
-
+systemctl restart $name-cjdroute.service
 
