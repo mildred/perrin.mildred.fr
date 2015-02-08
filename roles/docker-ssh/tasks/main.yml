@@ -1,8 +1,11 @@
 ---
+- command: docker pull jpetazzo/nsenter
+- command: docker run --rm -v /usr/local/bin:/target jpetazzo/nsenter
 - user: name="{{user}}" uid=0 createhome=yes shell=/usr/sbin/nologin home='/home/{{user}}'
-- file: state=directory path='/home/{{user}}/.ssh' mode=0755
-- copy:
-    content: 'command="nsenter --target $(docker inspect --format {{ "{{.State.Pid}}" }} {{name}}) --mount --uts --ipc --net --pid {{shell}}" {{ssh_key}}\n'
-    dest:  '/home/{{user}}/.ssh/authorized_keys'
-    mode:  0644
-    owner: '{{user}}'
+- authorized_key: key="{{ssh_key}}" user='{{user}}' key_options='command="nsenter --target $(docker inspect --format {{ "{{.State.Pid}}" }} {{name}}) --mount --uts --ipc --net --pid {{shell}}"'
+#- file: state=directory path='/home/{{user}}/.ssh' mode=0755
+#- copy:
+#    content: 'command="nsenter --target $(docker inspect --format {{ "{{.State.Pid}}" }} {{name}}) --mount --uts --ipc --net --pid {{shell}}" {{ssh_key}}\n'
+#    dest:  '/home/{{user}}/.ssh/authorized_keys'
+#    mode:  0644
+#    owner: '{{user}}'
