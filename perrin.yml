@@ -8,6 +8,7 @@
   roles:
     - role: socks_proxy
       port: 9868
+    - backup
     - role: cjdns-docker
       name: '{{name}}-cjdroute'
       ssh_key: '{{admin_sshkey}}'

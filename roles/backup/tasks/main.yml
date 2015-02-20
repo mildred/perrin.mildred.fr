@@ -1,0 +1,8 @@
+---
+- git:  repo=https://github.com/mildred/backup-next.git
+        dest=/usr/local/src/backup-next
+- command: cp /usr/local/src/backup-next/backup /usr/local/bin/backup
+- command: mkdir -p /usr/local/share/backup/
+- command: rm -rf /usr/local/share/backup/drivers
+- command: cp -r /usr/local/src/backup-next/drivers /usr/local/share/backup/drivers
+        
