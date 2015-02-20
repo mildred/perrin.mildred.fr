@@ -16,13 +16,16 @@ variable=file
 : ${image_name:="$name-data"}
 
 changed=false
-res="$(docker inspect -f "{{(index .Volumes \"$volume\")}}" "$image_name")$file"
+volume="$(docker inspect -f "{{(index .Volumes \"$volume\")}}" "$image_name")"
+res="$volume/$file"
 
 cat <<EOF >&3
 {
     "failed":    $failed,
     "changed":   $changed,
     "msg":       "$msg",
+    "volume":    "$volume",
+    "dir":       "$(dirname "$res")",
     "$variable": "$res"
 }
 EOF

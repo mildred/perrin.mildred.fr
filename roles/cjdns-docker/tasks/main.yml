@@ -2,6 +2,9 @@
 - shell: docker pull mildred/cjdns
 - systemd-docker-service: name='{{name}}' flags='--privileged --net=host' image=mildred/cjdns
 - service: name='{{name}}' enabled=yes state=restarted
-- docker-datadir: name='{{name}}' volume=/etc/cjdns file=/cjdroute.conf
+- docker-datadir: name='{{name}}' volume=/etc/cjdns file=cjdroute.conf
   register: cjdroute_conf
-- file: src='{{cjdroute_conf.file}}' dest='/etc/docker-{{name}}.conf' state=link
+- file: state=directory path='/etc/backup.d/cjdns/'
+- file: state=link dest='/etc/docker-{{name}}'      src='{{cjdroute_conf.dir}}'
+- file: state=link dest='/etc/docker-{{name}}.conf' src='docker-{{name}}/cjdroute.conf'
+- file: state=link dest='/etc/backup.d/cjdns/cjdroute.conf.link' src='/etc/docker-{{name}}/cjdroute.conf'

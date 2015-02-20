@@ -5,4 +5,45 @@
 - command: mkdir -p /usr/local/share/backup/
 - command: rm -rf /usr/local/share/backup/drivers
 - command: cp -r /usr/local/src/backup-next/drivers /usr/local/share/backup/drivers
-        
+
+- apt: name=rdiff-backup state=present
+- file: dest='/etc/backup.d/driver' src='/usr/local/share/backup/drivers/duplicity' state=link
+- file: path='/etc/backup.d' state=directory
+- file: path='/backup-test' state=directory
+- copy:
+    dest: /etc/backup.d/rdiff-backup.conf
+    content: |
+      DESTINATION=/backup-test
+      AUTO_PRUNE=true
+      AUTO_PRUNE_DELAY=1W
+- copy:
+    dest: /etc/backup.d/duplicity.conf
+    mode: 0600
+    content: |
+      DESTINATION=ftp://sd-43505@dedibackup-dc2.online.net/perrin-duplicity
+      AUTO_PRUNE=true
+      AUTO_PRUNE_DELAY=1W
+      export FTP_PASSWORD='{{ lookup('password', 'credentials/perrin/backup.ftppass length=15') }}'
+      export PASSPHRASE='{{ lookup('password', 'credentials/perrin/backup.gpgpass length=30') }}'
+- copy:
+    dest: /etc/systemd/system/backup.timer
+    content: |
+      [Unit]
+      Description=Run backups
+
+      [Timer]
+      OnCalendar=daily
+      Persistent=true
+
+      [Install]
+      WantedBy=timers.target
+- copy:
+    dest: /etc/systemd/system/backup.service
+    content: |
+      [Unit]
+      Description=Run backups
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/backup backup /etc/backup.d/
+- command: systemctl enable backup.timer
