@@ -8,8 +8,9 @@ exec 3>&1 >/dev/null 2>&1
 trap 'failed=true res_code=1 msg="Failed at line $LINENO"' ERR
 
 name=
-cmdline=
 after=
+image=
+flags=
 . "$1"
 
 changed=true
@@ -22,7 +23,7 @@ After=docker.io.service $after
 
 [Service]
 Restart=always
-ExecStart=/usr/local/bin/docker-start-run $name $cmdline
+ExecStart=/usr/local/bin/docker-start-run $name $flags $image
 ExecStop=/usr/bin/docker stop -t 2 $name
 
 [Install]
