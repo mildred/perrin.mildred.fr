@@ -1,0 +1,32 @@
+---
+- apt: name=apg state=present
+- shell: apg -d
+  register: mysqlpass
+- shell: apg -d
+  register: mysqlrootpass
+- copy:
+    dest: /etc/webmail-lite.docker.yml
+    content: |
+      web:
+        build: mildred/afterlogic-webmail-lite
+        ports:
+          - "8123:80"
+        volumes:
+          - /var/lib/webmail-lite:/var/www/somewhere
+        links:
+          - mysql
+      mysql:
+        image: mysql
+        env:
+          - MYSQL_ROOT_PASSWORD="{{ mysqlrootpass.stdout }}"
+          - MYSQL_USER=webmail
+          - MYSQL_PASSWORD="{{ mysqlpass.stdout }}"
+          - MYSQL_DATABASE=webmail
+- copy:
+    dest: /etc/systemd/system/webmail-lite.service
+    content: |
+      [Unit]
+      Description=WebMail Lite PHP
+
+      [Service]
+      ExecStart=/usr/bin/docker-compose -f /etc/webmail-lite.docker.yml up
