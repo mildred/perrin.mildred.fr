@@ -18,8 +18,8 @@ changed=true
 cat <<EOF >/tmp/$$.1
 [Unit]
 Description=Container $name
-Requires=docker.io.service
-After=docker.io.service $after
+Requires=docker.service
+After=docker.service $after
 
 [Service]
 Restart=always
