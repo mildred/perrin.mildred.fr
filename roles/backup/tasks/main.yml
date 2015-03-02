@@ -7,6 +7,8 @@
 - command: cp -r /usr/local/src/backup-next/drivers /usr/local/share/backup/drivers
 
 - apt: name=rdiff-backup state=present
+- apt: name=duplicity    state=present
+- apt: name=ncftp        state=present
 - file: dest='/etc/backup.d/driver' src='/usr/local/share/backup/drivers/duplicity' state=link
 - file: path='/etc/backup.d' state=directory
 - file: path='/backup-test' state=directory
@@ -16,6 +18,7 @@
       DESTINATION=/backup-test
       AUTO_PRUNE=true
       AUTO_PRUNE_DELAY=1W
+
 - copy:
     dest: /etc/backup.d/duplicity.conf
     mode: 0600
@@ -23,8 +26,12 @@
       DESTINATION=ftp://sd-43505@dedibackup-dc2.online.net/perrin-duplicity
       AUTO_PRUNE=true
       AUTO_PRUNE_DELAY=1W
-      export FTP_PASSWORD='{{ lookup('password', 'credentials/perrin/backup.ftppass length=15') }}'
-      export PASSPHRASE='{{ lookup('password', 'credentials/perrin/backup.gpgpass length=30') }}'
+      
+      export FTP_PASSWORD='{{ lookup('password', playbook_dir + '/credentials/perrin/backup.ftppass length=15') }}'
+      export PASSPHRASE='{{ lookup('password', playbook_dir + '/credentials/perrin/backup.gpgpass length=30') }}'
+      
+      FLAGS=(--gpg-options "--compress-algo=bzip2 --bzip2-compress-level=9 --cipher-algo=aes256 --digest-algo=sha512")
+      
 - copy:
     dest: /etc/systemd/system/backup.timer
     content: |
@@ -37,6 +44,7 @@
 
       [Install]
       WantedBy=timers.target
+
 - copy:
     dest: /etc/systemd/system/backup.service
     content: |
@@ -46,4 +54,5 @@
       [Service]
       Type=oneshot
       ExecStart=/usr/local/bin/backup backup /etc/backup.d/
+
 - command: systemctl enable backup.timer

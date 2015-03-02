@@ -1,0 +1,36 @@
+---
+- copy:
+    dest: /etc/resolv.conf
+    content: |
+      domain mildred.fr
+      search mildred.fr
+      nameserver 80.67.169.12
+      nameserver 80.67.169.40
+      nameserver 2001:910:800::12
+      nameserver 2001:910:800::40
+- copy:
+    dest: /etc/systemd/network/eth.network
+    content: |
+      [Match]
+      Name=eth0
+      
+      [Network]
+      DHCP=both
+      Domains=mildred.fr
+      DNS=80.67.169.12
+      DNS=80.67.169.40
+      DNS=2001:910:800::12
+      DNS=2001:910:800::40
+      
+      [DHCP]
+      VendorClassIdentifier=00:03:00:01:1a:f8:12:7a:25:9b
+      UseDNS=false
+      
+
+- service: name=systemd-networkd enabled=true
+- service: name=systemd-resolved enabled=true
+- service: name=networking       enabled=false
+
+- service: name=systemd-networkd state=started
+- service: name=systemd-resolved state=started
+- service: name=networking       state=stopped

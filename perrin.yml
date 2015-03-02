@@ -6,9 +6,11 @@
     admin_sshkey: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDByLP6c0nvG8itxtyf9ucG6wQG5r6/mwJcPw7aFQb26930zRTOi+PfMjMFBWrhwkFDktlnTBGOvp+bygU4JuipU3pR5BL5o+Lrawd+Uu00kkhxlmkTzP1WYcdpbgBlXutLTuta5Gt4c3e8xUwdcvGHTizKZZZ+BENaOv7j2yfAaJnBJCKcdoI7WCBhuezRWfC2URfVMad/mPxECei/SzGcjhjh1hQiogXH9jwXsrrsU0nuMy8H2LWgqp2nDGFVvqInKC0ICWwDuhpNT21OB0KGdd7LxYdlve/CaMKYRhRMBLmu+grV8akGkmD0uGmF5fVNUOxcRW8PZnCEPiIFvgcv
     name: mildred
   roles:
+    - backup
+    - mail
+    - network
     - role: socks_proxy
       port: 9868
-    - backup
     - role: cjdns-docker
       name: '{{name}}-cjdroute'
       ssh_key: '{{admin_sshkey}}'
