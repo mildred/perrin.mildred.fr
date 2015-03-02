@@ -4,8 +4,9 @@ changed=false
 failed=false
 res_code=0
 msg=Success
-exec 3>&1 >/dev/null 2>&1
-trap 'failed=true res_code=1 msg="Failed at line $LINENO"' ERR
+exec 3>&1 >/tmp/$$ 2>&1
+trap 'failed=true res_code=1 msg="Failed at line $LINENO: $(cat /tmp/$$)"' ERR
+trap 'rm -f /tmp/$$' EXIT
 
 name=
 package=

@@ -1,5 +1,5 @@
 ---
-- go-install: name=go-ipfs package=github.com/jbenet/go-ipfs/cmd/ipfs
+- go-install: name=go-ipfs package=github.com/jbenet/go-ipfs/cmd/ipfs update=true
 - apt: name=fuse state=present
 - apt: name=sudo state=present
 - template: src=ipfs-system dest=/usr/local/sbin/ipfs-system mode=0755 owner=root
