@@ -1,27 +1,44 @@
 ---
-- apt: name=apg state=present
-- shell: apg -d
-  register: mysqlpass
-- shell: apg -d
-  register: mysqlrootpass
+- shell: if ! [ -e /usr/local/bin/docker-compose ]; then curl -L https://github.com/docker/compose/releases/download/1.1.0/docker-compose-`uname -s`-`uname -m` >/usr/local/bin/docker-compose; chmod +x /usr/local/bin/docker-compose; fi
+#- apt: name=apg state=present
+#- shell: apg -d
+#  register: mysqlpass
+#- shell: apg -d
+#  register: mysqlrootpass
+- file: path=/etc/webmail-lite state=directory
 - copy:
-    dest: /etc/webmail-lite.docker.yml
+    dest: /etc/webmail-lite/createdb.sql
     content: |
-      web:
-        build: mildred/afterlogic-webmail-lite
+      CREATE DATABASE IF NOT EXISTS webmail
+- copy:
+    dest: /etc/webmail-lite/docker.yml
+    content: |
+      webmail:
+        image: mildred/afterlogic-webmail-lite
+        environment:
+          - MYSQL_USER=webmail
+          - MYSQL_PASSWORD=webmailpasswd
+          - MYSQL_DATABASE=webmail
+          - ADMIN_LOGIN=admin
+          - ADMIN_PASSWORD={{lookup('password', playbook_dir + '/credentials/perrin/admin.webmailconsolepass length=30')}}
         ports:
           - "8123:80"
-        volumes:
-          - /var/lib/webmail-lite:/var/www/somewhere
         links:
           - mysql
+          - mysql:smtp
+        external_links:
+          - mildred-mail:imap
       mysql:
-        image: mysql
-        env:
-          - MYSQL_ROOT_PASSWORD="{{ mysqlrootpass.stdout }}"
+        image: tutum/mysql
+        command: bash -x /run.sh
+        environment:
           - MYSQL_USER=webmail
-          - MYSQL_PASSWORD="{{ mysqlpass.stdout }}"
-          - MYSQL_DATABASE=webmail
+          - MYSQL_PASS=webmailpasswd
+          - STARTUP_SQL=/etc/webmail-lite/createdb.sql
+        volumes:
+          - /var/lib/webmail-lite/mysql:/var/lib/mysql
+          - /etc/webmail-lite:/etc/webmail-lite
+
 - copy:
     dest: /etc/systemd/system/webmail-lite.service
     content: |
@@ -29,4 +46,8 @@
       Description=WebMail Lite PHP
 
       [Service]
-      ExecStart=/usr/bin/docker-compose -f /etc/webmail-lite.docker.yml up
+      ExecStart=/usr/local/bin/docker-compose -f /etc/webmail-lite/docker.yml up
+
+- command: docker-compose -f /etc/webmail-lite/docker.yml pull
+- command: docker-compose -f /etc/webmail-lite/docker.yml run webmail php /usr/share/afterlogic/afterlogic.php update
+- service: name=webmail-lite state=restarted enabled=true
