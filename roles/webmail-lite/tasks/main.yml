@@ -47,6 +47,10 @@
 
       [Service]
       ExecStart=/usr/local/bin/docker-compose -f /etc/webmail-lite/docker.yml up
+      
+      [Install]
+      WantedBy=multi-user.target
+      
 
 - command: docker-compose -f /etc/webmail-lite/docker.yml pull
 - command: docker-compose -f /etc/webmail-lite/docker.yml run webmail php /usr/share/afterlogic/afterlogic.php update

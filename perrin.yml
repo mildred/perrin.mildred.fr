@@ -9,13 +9,13 @@
     - webmail-lite
     - backup
     - mail
-    - network
+    #- network
     - role: socks_proxy
       port: 9868
     - role: cjdns-docker
       name: '{{name}}-cjdroute'
       ssh_key: '{{admin_sshkey}}'
-    - ipfs
+    #- ipfs
 
 # FIND OUT:
 #  include task file using the include module
