@@ -1,0 +1,7 @@
+---
+- name: reload systemd
+  command: systemctl daemon-reload
+- name: restart webmail-mysql
+  service: name="{{name}}-mysql" state=restarted
+- name: restart webmail
+  service: name="{{name}}" state=restarted

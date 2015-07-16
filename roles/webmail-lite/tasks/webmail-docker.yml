@@ -1,0 +1,86 @@
+---
+- name: "Install systemd-docker"
+  command: docker run --rm -v /usr/local/bin:/opt/bin ibuildthecloud/systemd-docker
+  args:
+    creates: /usr/local/bin/systemd-docker
+  notify:
+    - restart webmail-mysql
+    - restart webmail
+
+- name: "Install {{name}}.service"
+  copy:
+    dest: "/etc/systemd/system/{{name}}.service"
+    content: |
+      [Unit]
+      Description=Afterlogic WebMail-Lite {{name}}
+      After=docker.service {{name}}-mysql.service {{mail_service}}.service
+      Requires=docker.service {{name}}-mysql.service {{mail_service}}.service
+      
+      [Service]
+      ExecStartPre=/usr/bin/docker pull mildred/afterlogic-webmail-lite
+      ExecStart=/usr/local/bin/systemd-docker run --rm --name {{name}} \\
+        -e MYSQL_USER=webmail \\
+        -e MYSQL_PASSWORD=webmailpasswd \\
+        -e MYSQL_DATABASE=webmail \\
+        -e ADMIN_LOGIN=admin \\
+        -e ADMIN_PASSWORD={{lookup('password', playbook_dir + '/credentials/perrin/admin.webmailconsolepass length=30')}} \\
+        --link {{mail_service}}:imap \\
+        --link {{mail_service}}:smtp \\
+        --link {{name}}-mysql:mysql \\
+        -p 8123:80 \\
+        mildred/afterlogic-webmail-lite
+      Restart=always
+      RestartSec=10s
+      Type=notify
+      NotifyAccess=all
+      TimeoutStartSec=120
+      TimeoutStopSec=15
+      
+      [Install]
+      WantedBy=multi-user.target
+      Wants={{name}}-mysql.service
+      Wants={{mail_service}}.service
+  notify:
+    - reload systemd
+    - restart webmail
+
+- name: "Install {{name}}-mysql.service"
+  copy:
+    dest: "/etc/systemd/system/{{name}}-mysql.service"
+    content: |
+      [Unit]
+      Description=Afterlogic WebMail-Lite {{name}}
+      After=docker.service
+      Requires=docker.service
+      
+      [Service]
+      ExecStartPre=/usr/bin/docker pull tutum/mysql
+      ExecStart=/usr/local/bin/systemd-docker run --rm --name {{name}}-mysql \\
+        -e MYSQL_USER=webmail \\
+        -e MYSQL_PASS=webmailpasswd \\
+        -e STARTUP_SQL=/etc/webmail-lite/createdb.sql \\
+        -v /var/lib/webmail-lite/mysql:/var/lib/mysql \\
+        -v /etc/webmail-lite:/etc/webmail-lite \\
+        tutum/mysql
+      Restart=always
+      RestartSec=10s
+      Type=notify
+      NotifyAccess=all
+      TimeoutStartSec=120
+      TimeoutStopSec=15
+  notify:
+    - reload systemd
+    - restart webmail-mysql
+    - restart webmail
+
+- file: path=/etc/webmail-lite state=directory
+- copy:
+    dest: /etc/webmail-lite/createdb.sql
+    content: |
+      CREATE DATABASE IF NOT EXISTS webmail
+  notify:
+    - restart webmail-mysql
+    - restart webmail
+
+- command: systemctl daemon-reload
+- service: name="{{name}}" enabled=yes state=started

@@ -1,3 +1,5 @@
 [perrin]
 perrin.mildred.fr ansible_ssh_user=root
 
+[localhost]
+localhost connection=local
