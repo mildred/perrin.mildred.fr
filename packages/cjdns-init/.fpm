@@ -1,0 +1,7 @@
+-d cjdns
+-a all -n cjdns-init -v 3
+--after-install after-install.sh
+--before-remove before-remove.sh
+--after-upgrade after-upgrade.sh
+-s dir -C fpmroot .
+

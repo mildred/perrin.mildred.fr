@@ -1,0 +1,4 @@
+-v 2 -n perrin -a all
+-d cjdns-init
+-s dir -C root .
+

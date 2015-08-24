@@ -1,0 +1,10 @@
+# fpmbot repository
+cjdns	git=https://github.com/cjdelisle/cjdns.git
+	clean=-fdx
+	ref=staging
+	preparecmd=apt-get install -y curl python
+	fpmbuild=./do
+	fpmgen=echo -s dir cjdroute=/usr/bin/cjdroute >.fpm 
+cjdns-init
+perrin
+

@@ -1,0 +1,10 @@
+[Unit]
+Description=cjdns routing
+
+[Service]
+ExecStartPre=/bin/sh -c '[ -e /etc/cjdroute.conf ] || /usr/bin/cjdroute --genconf >/etc/cjdroute.conf'
+ExecStart=/bin/sh -c 'exec /usr/bin/cjdroute --nobg </etc/cjdroute.conf'
+
+[Install]
+WantedBy=network.target
+
