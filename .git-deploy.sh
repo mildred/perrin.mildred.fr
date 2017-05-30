@@ -32,12 +32,12 @@ while [ $# -gt 0 ]; do
       exit 1
       ;;
     --repo=*)
-      GIT_PUSH_OPTS=("${GIT_PUSH_OPTS[@]}" "$1")
+      GIT_PUSH_OPTS+=("$1")
       GIT_PUSH_REPO="${1#*=}"
       shift
       ;;
     -*)
-      GIT_PUSH_OPTS=("${GIT_PUSH_OPTS[@]}" "$1")
+      GIT_PUSH_OPTS+=("$1")
       if [ -n "$GIT_PUSH_REPO" ]; then
         break
       else
@@ -50,6 +50,13 @@ while [ $# -gt 0 ]; do
       break;
   esac
 done
+
+GIT_PUSH_OPTS+=("$@")
+
+if [[ ${#GIT_PUSH_OPTS} -le 0 ]]; then
+  echo "Push options required" >&2
+  exit 1
+fi
 
 GIT_DIR="$(git rev-parse --git-dir)"
 export GIT_CIPUSH_TOPLEVEL="$(git rev-parse --show-toplevel)"
@@ -154,7 +161,7 @@ cleanup(){
 
 trap cleanup INT
 
-( set -x; git push -f "${GIT_PUSH_OPTS[@]}" "$@" )
+( set -x; git push -f "${GIT_PUSH_OPTS[@]}" )
 
 cleanup
 
