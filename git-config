@@ -1,0 +1,3 @@
+#!/bin/sh
+
+git config alias.deploy !$PWD/.git-deploy.sh
