@@ -1,6 +1,0 @@
----
-- docker-datadir: name='mildred-mail' volume=/var/mail
-  register: var_mail
-- file: state=directory path='/etc/backup.d/mail/'
-- file: state=link dest='/var/mildred-mail' src='{{var_mail.file}}'
-- file: state=link dest='/etc/backup.d/mail/data.link' src='/var/mildred-mail'

@@ -1,9 +1,0 @@
----
-# vim: sts=2:sw=2:et
-- hosts: perrin
-  gather_facts: no
-  tasks:
-    - copy:
-        content: "deb http://files.mildred.fr/debian/ main/\n"
-        dest: /etc/apt/sources.list.d/files.mildred.fr.list
-    - apt: name=perrin update_cache=yes force=yes

@@ -1,8 +1,0 @@
----
-# vim: sts=2:sw=2:et
-- hosts: perrin
-  gather_facts: no
-  tasks:
-    - copy: src=packages/ dest=/var/lib/fpmbot/src/ force=yes follow=no
-    #- copy: src=main.repo dest=/var/lib/fpmbot/src/main.repo
-
