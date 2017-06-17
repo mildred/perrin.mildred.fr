@@ -1,0 +1,14 @@
+---
+- hosts: all
+  tasks:
+  - copy:
+      dest: /etc/http-reverse.d/http-perrinrepo.cfg
+      content: |
+        HTTP=9093
+        NAME=perrinrepo
+    notify: restart http-reverse
+  handlers:
+  - name: restart http-reverse
+    systemd:
+      name: http-reverse
+      state: restarted

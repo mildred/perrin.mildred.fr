@@ -1,0 +1,73 @@
+- hosts: all
+  tasks:
+  - package:
+      name: inn2
+      state: present
+  - copy:
+      dest: /etc/news/readers.conf
+      content: |
+        auth default {
+          hosts: *
+          default: <PUBLIC>
+        }
+
+        access default {
+          users: <PUBLIC>
+          newsgroups: *
+          access: "RPA"
+        }
+
+  - copy:
+      dest: /etc/news/control.ctl.local
+      content: |
+        newgroup:*:*:doit
+        rmgroup:*:*:doit
+
+  - lineinfile:
+      dest:   /etc/news/inn2.conf
+      line:   "pgpverify: false"
+      regexp: "^pgpverify:"
+
+  - lineinfile:
+      dest:   /etc/news/inn2.conf
+      line:   'organization: "Hyperboria News at h.mildred.fr"'
+      regexp: "^organization:"
+
+  - lineinfile:
+      dest:   /etc/news/inn2.conf
+      line:   'nnrpdflags: "-n"'
+      regexp: "^nnrpdflags:"
+
+  - lineinfile:
+      dest:   /etc/news/expire.ctl
+      line:   "*:A:never:never:never"
+      regexp: "^\\*:A.*"
+
+  - blockinfile:
+      dest: /etc/news/incoming.conf
+      block: |
+        peer news.gathman.org {
+          hostname: fc6f:b58e:9dbe:be71:602f:2eb8:2e72:cd7b
+        }
+
+  - blockinfile:
+      dest: /etc/news/innfeed.conf
+      block: |
+        peer news.gathman.org {
+          ip-name: fc6f:b58e:9dbe:be71:602f:2eb8:2e72:cd7b
+        }
+
+  - file:
+      dest:   /etc/backup.d/nntp
+      state:  directory
+
+  - file:
+      dest:   /etc/backup.d/nntp/news.link
+      src:    /var/lib/news
+      state:  link
+
+  - file:
+      dest:   /etc/backup.d/nntp/spool.link
+      src:    /var/spool/news
+      state:  link
+

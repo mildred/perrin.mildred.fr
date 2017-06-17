@@ -18,8 +18,8 @@ GIT_PUSH_REPO=
 
 GIT_ADD=
 while [ $# -gt 0 ]; do
-  case $1 in
-    -a)
+  case "$1" in
+    -a|-u)
       GIT_ADD="git add -u"
       shift
       ;;
@@ -32,12 +32,12 @@ while [ $# -gt 0 ]; do
       exit 1
       ;;
     --repo=*)
-      GIT_PUSH_OPTS=("${GIT_PUSH_OPTS[@]}" "$1")
+      GIT_PUSH_OPTS+=("$1")
       GIT_PUSH_REPO="${1#*=}"
       shift
       ;;
     -*)
-      GIT_PUSH_OPTS=("${GIT_PUSH_OPTS[@]}" "$1")
+      GIT_PUSH_OPTS+=("$1")
       if [ -n "$GIT_PUSH_REPO" ]; then
         break
       else
@@ -50,6 +50,15 @@ while [ $# -gt 0 ]; do
       break;
   esac
 done
+
+GIT_PUSH_OPTS+=("$@")
+
+if [[ ${#GIT_PUSH_OPTS} -le 0 ]]; then
+  git remote -v >&2
+  echo >&2
+  echo "Please specify a git remote" >&2
+  exit 1
+fi
 
 GIT_DIR="$(git rev-parse --git-dir)"
 export GIT_CIPUSH_TOPLEVEL="$(git rev-parse --show-toplevel)"
@@ -110,7 +119,7 @@ trap warning INT
   git update-ref HEAD_UNTRACKED HEAD
 
   git submodule foreach --quiet "$SCRIPT_COMMIT_MERGE"
-) >/dev/null 2>&1
+) >/dev/null
 
 echo " $(git rev-parse HEAD) . ($(git describe --all HEAD))"
 git submodule status --recursive
@@ -154,7 +163,7 @@ cleanup(){
 
 trap cleanup INT
 
-( set -x; git push -f "${GIT_PUSH_OPTS[@]}" "$@" )
+( set -x; git push -f "${GIT_PUSH_OPTS[@]}" )
 
 cleanup
 

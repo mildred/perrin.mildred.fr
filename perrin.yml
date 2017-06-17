@@ -1,0 +1,15 @@
+---
+- hosts: all
+  tasks:
+
+  - copy:
+      dest: /etc/cron.daily/backup
+      mode: 0755
+      content: |
+        #!/bin/sh
+        /usr/bin/backup backup /etc/backup.d
+
+  #- lineinfile:
+  #    dest: /etc/hosts
+  #    regexp: '^127.0.1.1'
+  #    line: '127.0.1.1	perrin.mildred.fr perrin'

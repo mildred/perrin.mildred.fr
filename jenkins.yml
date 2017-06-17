@@ -1,0 +1,27 @@
+- hosts: all
+  tasks:
+  - copy:
+      dest: /etc/systemd/system/jenkins.service
+      content: |
+        [Unit]
+        Description=Jenkins
+
+        [Service]
+        ExecStartPre=-/usr/bin/0install update http://mildred.github.io/0feed-jenkins/jenkins.xml
+        ExecStart=/usr/bin/0install run http://mildred.github.io/0feed-jenkins/jenkins.xml --httpsPort=4443 --httpPort=8880
+  - systemd:
+      name: jenkins
+      daemon_reload: yes
+      enabled: yes
+      state: started
+  - copy:
+      dest: /etc/http-reverse.d/https-jenkins.cfg
+      content: |
+        NAME=jenkins
+        HTTP=8880
+    notify: restart http-reverse
+  handlers:
+  - name: restart http-reverse
+    systemd:
+      name: http-reverse
+      state: restarted
