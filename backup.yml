@@ -1,0 +1,42 @@
+---
+- hosts: all
+  tasks:
+
+  - package:
+      name: perrin-backup
+      state: absent
+
+  - package:
+      name: backup
+      state: latest
+
+  - package:
+      name: duplicity
+      state: latest
+
+  - package:
+      name: lftp
+      state: latest
+
+  - package:
+      name: ncftp
+      state: latest
+
+  - copy:
+      dest: /etc/backup.d/duplicity.conf
+      mode: 0644
+      content: |
+        DESTINATION=ftp://sd-101652@dedibackup-dc3.online.net/perrin-duplicity
+        AUTO_PRUNE=true
+        AUTO_PRUNE_DELAY=1W
+
+        export FTP_PASSWORD="$(cat /etc/secrets/backup/ftp_password)"
+        export PASSPHRASE="$(cat /etc/secrets/backup/passphrase)"
+
+        FLAGS=(--gpg-options "--compress-algo=bzip2 --bzip2-compress-level=9 --cipher-algo=aes256 --digest-algo=sha512")
+
+  - file:
+      src: /usr/share/backup/drivers/duplicity
+      dest: /etc/backup.d/driver
+      state: link
+
