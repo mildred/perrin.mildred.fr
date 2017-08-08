@@ -1,0 +1,103 @@
+- hosts: all
+  tasks:
+  - copy:
+      dest: /usr/sbin/policy-rc.d
+      mode: 0755
+      content: |
+        #!/bin/sh
+        exit 101
+  - package:
+      name: nginx
+      state: present
+  - package:
+      name: http-reverse
+      state: present
+  - file:
+      dest: /etc/nginx/sites-enabled/default
+      state: absent
+  - include: tasks/rsync.yml
+    vars:
+      authorized_key: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDNo2s/phJKcMHpnUeSP3VjY+zh/TrKV/exNtZsem6MK'
+      path: /srv/www/mildred.fr
+  - copy:
+      dest: /etc/nginx/sites-available/www
+      content: |
+        server {
+          listen 8080 default_server;
+          listen [::]:8080 default_server ipv6only=on;
+          server_name www.mildred.fr;
+          rewrite ^ http://mildred.fr$request_uri? permanent;
+        }
+        server {
+          listen 8080;
+          listen [::]:8080;
+          server_name mildred.fr;
+          root "/srv/www/mildred.fr";
+
+          rewrite "^/(Blog/)?tags/([^/0-9]+).html$"         /tags/$2/    permanent;
+          rewrite "^/(Blog/)?tags/([^/0-9]+)([0-9]+).html$" /tags/$2/$3/ permanent;
+          rewrite "^/articles/([0-9]{4})-([0-9]{2})-([0-9]{2})-(.*)/(.*)$"  /Blog/$1/$2/$3/$4/$5 permanent;
+          rewrite "^/Blog/blog/([0-9]{4})/([0-9]{2})/([0-9]{2})/(.*).html$" /Blog/$1/$2/$3/$4/   permanent;
+          rewrite "^/Blog/blog/atom.xml$"              /atom.xml permanent;
+          rewrite "^/Blog/(blog/index)?([0-9]+).html$" /Blog/$2/ permanent;
+          rewrite "^/Blog/(Images|tags)/(.*)$"         /$1/$2    permanent;
+          rewrite "^/Blog/blog/(.*)$"                  /Blog/$1  permanent;
+
+          location /Blog/blog/2010/Images-SRS/ { return 410; }
+          location /Blog/2010/Images-SRS/      { return 410; }
+        }
+        server {
+          listen 8080;
+          listen [::]:8080;
+          server_name www2.mildred.fr;
+          root "/srv/www/mildred.fr";
+
+          rewrite "^/(Blog/)?tags/([^/0-9]+).html$"         /tags/$2/    permanent;
+          rewrite "^/(Blog/)?tags/([^/0-9]+)([0-9]+).html$" /tags/$2/$3/ permanent;
+          rewrite "^/articles/([0-9]{4})-([0-9]{2})-([0-9]{2})-(.*)/(.*)$"  /Blog/$1/$2/$3/$4/$5 permanent;
+          rewrite "^/Blog/blog/([0-9]{4})/([0-9]{2})/([0-9]{2})/(.*).html$" /Blog/$1/$2/$3/$4/   permanent;
+          rewrite "^/Blog/blog/atom.xml$"              /atom.xml permanent;
+          rewrite "^/Blog/(blog/index)?([0-9]+).html$" /Blog/$2/ permanent;
+          rewrite "^/Blog/(Images|tags)/(.*)$"         /$1/$2    permanent;
+          rewrite "^/Blog/blog/(.*)$"                  /Blog/$1  permanent;
+
+          location /Blog/blog/2010/Images-SRS/ { return 410; }
+          location /Blog/2010/Images-SRS/      { return 410; }
+        }
+    notify: restart nginx
+  - file:
+      src: ../sites-available/www
+      dest: /etc/nginx/sites-enabled/www
+      state: link
+    notify: restart nginx
+  - copy:
+      dest: /etc/http-reverse.d/www.cfg
+      content: |
+        HTTP=8080
+        NAME=www
+    notify: restart reverse proxy
+  - copy:
+      dest: /etc/http-reverse.d/www.cfg
+      content: |
+        HTTP=8080
+        NAME=www2
+    notify: restart reverse proxy
+  - copy:
+      dest: /etc/http-reverse.d/default.cfg
+      content: |
+        HTTP=8080
+        HOST=$(hostname -d)
+    notify: restart reverse proxy
+  handlers:
+  - name: restart nginx
+    service:
+      name: nginx
+      state: restarted
+  - name: restart reverse proxy
+    service:
+      name: http-reverse
+      state: restarted
+
+
+
+

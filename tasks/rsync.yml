@@ -1,0 +1,40 @@
+---
+# authorized_key: ssh key to authorize
+# path: read-write path to provide
+- package:
+    name: rsync
+    state: present
+- user:
+    name: rsync
+    home: /var/lib/rsync
+    system: yes
+- file:
+    dest: /usr/local/bin/
+    state: directory
+- name: Unzip /usr/local/bin/rrsync
+  command: sh -c "gunzip -c </usr/share/doc/rsync/scripts/rrsync.gz >/usr/local/bin/rrsync"
+  args:
+    creates: /usr/local/bin/rrsync
+- file:
+    dest: /usr/local/bin/rrsync
+    mode: 0755
+- file:
+    dest:  /var/lib/rsync/.ssh/
+    owner: rsync
+    group: rsync
+    state: directory
+- file:
+    dest:  /var/lib/rsync/.ssh/authorized_keys
+    owner: rsync
+    group: rsync
+    mode:  0644
+    state: touch
+- lineinfile:
+    dest:   /var/lib/rsync/.ssh/authorized_keys
+    line:   'command="/usr/local/bin/rrsync {{ path }}",no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc,no-X11-forwarding {{ authorized_key }}'
+    regexp: " {{ authorized_key | regex_escape() }}$"
+- file:
+    dest: "{{ path }}"
+    owner: rsync
+    group: rsync
+    state: directory
