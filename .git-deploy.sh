@@ -1,9 +1,9 @@
 #!/bin/bash
 
 usage(){
-  echo "Usage: git cipush [-a|-A|-h] PUSH_OPTIONS"
-  echo "    -a: Perform git add -u"
-  echo "    -a: Perform git add -A"
+  echo "Usage: git deploy [-a|-A|-h] PUSH_OPTIONS"
+  echo "    -a,-u: Perform git add -u"
+  echo "    -A:    Perform git add -A"
   echo "This command runs recursively:"
   echo "    git commit --allow-empty -m 'staging area'"
   echo "    git add [-A|-u]"
@@ -112,6 +112,10 @@ trap warning INT
   if [ -n "$GIT_ADD" ]; then
     (set -x; $GIT_ADD)
     git submodule foreach --quiet --recursive "$GIT_ADD"
+  fi
+
+  if [ -x .gitdeploy ]; then
+    (set -x; ./.gitdeploy)
   fi
 
   git submodule foreach --quiet "$SCRIPT_COMMIT_UNTRACKED"
