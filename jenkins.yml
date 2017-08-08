@@ -19,6 +19,7 @@
       content: |
         NAME=jenkins
         HTTP=8880
+        HTTPS_FORCE=true
     notify: restart http-reverse
   handlers:
   - name: restart http-reverse
