@@ -1,0 +1,73 @@
+- hosts: all
+  tasks:
+
+    - copy:
+        dest: /etc/systemd/system/nomad.service
+        content: |
+          [Unit]
+          Description=Nomad server and agent
+          After=network.target
+          Before=multi-user.target
+          Wants=consul.service
+          After=consul.service
+
+          [Service]
+          Type=simple
+          Environment=NOMAD_VERSION=0.7.1
+          Environment=NOMAD_REGION=global
+          Environment=NOMAD_DC=dc-1
+          ExecStartPre=/bin/mkdir -p /var/cache/nomad /var/lib/nomad
+          ExecStartPre=-/usr/bin/wget --no-verbose https://releases.hashicorp.com/nomad/${NOMAD_VERSION}/nomad_${NOMAD_VERSION}_linux_amd64.zip -O /var/cache/nomad/nomad-${NOMAD_VERSION}.zip
+          ExecStartPre=/usr/bin/unzip -o /var/cache/nomad/nomad-${NOMAD_VERSION}.zip -d /var/cache/nomad
+          ExecStartPre=/bin/chmod +x /var/cache/nomad/nomad
+          ExecStart=/var/cache/nomad/nomad agent -config=/etc/nomad.hcl -data-dir=/var/lib/nomad -region=${NOMAD_REGION} -dc=${NOMAD_DC} -server -client -bootstrap-expect=1
+          ExecReload=/bin/kill -HUP $MAINPID
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - copy:
+        dest: /etc/nomad.hcl
+        content: |
+          bind_addr = "127.0.0.1"
+          advertise {
+            http = "127.0.0.1"
+            rpc  = "127.0.0.1"
+            serf = "127.0.0.1"
+          }
+
+    - copy:
+        dest: /etc/systemd/system/consul.service
+        content: |
+          [Unit]
+          Description=Consul Server Node
+          After=network.target
+          Before=multi-user.target
+
+          [Service]
+          Type=simple
+          Environment=CONSUL_VERSION=1.0.2
+          ExecStartPre=/bin/mkdir -p /var/cache/consul /var/lib/consul
+          ExecStartPre=-/usr/bin/wget --no-verbose https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip -O /var/cache/consul/consul-${CONSUL_VERSION}.zip
+          ExecStartPre=/usr/bin/unzip -o /var/cache/consul/consul-${CONSUL_VERSION}.zip -d /var/cache/consul
+          ExecStartPre=/bin/chmod +x /var/cache/consul/consul
+          ExecStart=/var/cache/consul/consul agent -ui -server -bind=127.0.0.1 -client=127.0.0.1 -bootstrap-expect=1 -data-dir=/var/lib/consul
+          ExecStop=/var/cache/consul/consul leave
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - systemd:
+        name: consul
+        daemon_reload: yes
+        enabled: yes
+        state: started
+
+    - systemd:
+        name: nomad
+        daemon_reload: yes
+        enabled: yes
+        state: started
+

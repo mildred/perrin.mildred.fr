@@ -1,0 +1,104 @@
+- hosts: all
+  tasks:
+
+    - package:
+        name: transmission-daemon
+        state: present
+
+    - copy:
+        dest: /etc/systemd/system/transmission-daemon.service
+        content: |
+          [Unit]
+          Description=Transmission BitTorrent Daemon
+          After=network.target
+
+          [Service]
+          User=debian-transmission
+          Type=notify
+          ExecStart=/usr/bin/transmission-daemon -f --log-error -t -u bourderie -v deriebour -a '*' --port 9091
+          ExecStop=/bin/kill -s STOP $MAINPID
+          ExecReload=/bin/kill -s HUP $MAINPID
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - copy:
+        dest: /etc/systemd/system/transmission-daemon-t411.service
+        content: |
+          [Unit]
+          Description=Transmission BitTorrent Daemon
+          After=network.target
+
+          [Service]
+          User=debian-transmission
+          Type=notify
+          Environment=TRANSMISSION_HOME=/var/lib/transmission-daemon/t411/
+          ExecStart=/usr/bin/transmission-daemon -f --log-error -t -u bourderie -v deriebour -a '*' --no-dht --port 9094 --peerport 51414
+          ExecStop=/bin/kill -s STOP $MAINPID
+          ExecReload=/bin/kill -s HUP $MAINPID
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - copy:
+        dest: /etc/systemd/system/transmission-results.service
+        content: |
+          [Unit]
+          Description=Transmission downloaded files
+
+          [Service]
+          Restart=always
+          ExecStart=/usr/bin/twistd -n web -p 9092 --path .
+          WorkingDirectory=/var/lib/transmission-daemon/downloads
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - systemd:
+        name: transmission-daemon
+        daemon_reload: yes
+        enabled: yes
+        state: started
+
+    - systemd:
+        name: transmission-daemon-t411
+        daemon_reload: yes
+        enabled: yes
+        state: started
+
+    - systemd:
+        name: transmission-results
+        daemon_reload: yes
+        enabled: yes
+        state: started
+
+    - copy:
+        dest: /etc/http-reverse.d/https-transmission-t411.cfg
+        content: |
+          NAME=transmission-t411.w
+          HTTP=9094
+          HTTPS_FORCE=true
+      notify: restart http-reverse
+
+    - copy:
+        dest: /etc/http-reverse.d/https-transmission.cfg
+        content: |
+          NAME=transmission.w
+          HTTP=9091
+          HTTPS_FORCE=true
+      notify: restart http-reverse
+
+    - copy:
+        dest: /etc/http-reverse.d/https-transmission-results.cfg
+        content: |
+          NAME=transmission-results.w
+          HTTP=9092
+          HTTPS_FORCE=true
+      notify: restart http-reverse
+
+  handlers:
+
+    - name: restart http-reverse
+      systemd:
+        name: http-reverse
+        state: restarted
