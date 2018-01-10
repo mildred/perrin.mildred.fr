@@ -44,10 +44,20 @@
       regexp: "^\\*:A.*"
 
   - blockinfile:
+      dest: /etc/news/newsfeeds
+      block: |
+        innfeed!\
+        	:!*\
+        	:Tc,Wnm*:/usr/lib/news/bin/innfeed
+
+  - blockinfile:
       dest: /etc/news/incoming.conf
       block: |
         peer news.gathman.org {
           hostname: fc6f:b58e:9dbe:be71:602f:2eb8:2e72:cd7b
+        }
+        peer nntpcont {
+          hostname: fc0d:a1d9:cad2:29e2:679:af1d:8923:1055
         }
 
   - blockinfile:
@@ -55,6 +65,9 @@
       block: |
         peer news.gathman.org {
           ip-name: fc6f:b58e:9dbe:be71:602f:2eb8:2e72:cd7b
+        }
+        peer nntpcont {
+          ip-name: fc0d:a1d9:cad2:29e2:679:af1d:8923:1055
         }
 
   - file:
