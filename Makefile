@@ -4,6 +4,7 @@ PLAYBOOKS := \
 
 EXCLUDED_PLAYBOOKS := \
 	hashistack.yml \
+	jenkins.yml \
 
 PLAYBOOKS:=$(PLAYBOOKS) $(filter-out $(PLAYBOOKS) $(EXCLUDED_PLAYBOOKS),$(wildcard *.yml))
 

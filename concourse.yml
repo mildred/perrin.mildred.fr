@@ -1,0 +1,133 @@
+---
+- hosts: all
+  tasks:
+
+  - name: Download Concourse
+    get_url:
+      url: https://github.com/concourse/concourse/releases/download/v4.2.3/concourse_linux_amd64
+      dest: /usr/local/bin/concourse
+      mode: 0755
+  - name: Download Fly
+    get_url:
+      url: https://github.com/concourse/concourse/releases/download/v4.2.3/fly_linux_amd64
+      dest: /usr/local/bin/fly
+      mode: 0755
+
+  - copy:
+      dest: /etc/systemd/system/concourse-quickstart.service
+      content: |
+        [Unit]
+        Description=Concourse Web and Worker
+        After=network.target concourse-postgresql.service
+        Requires=concourse-postgresql.service
+        Before=multi-user.target
+
+        [Service]
+        Type=simple
+        Restart=always
+        ExecStart=/usr/local/bin/concourse quickstart \
+          --postgres-host=127.0.0.2 \
+          --postgres-user=concourse \
+          --postgres-password=concourse \
+          --postgres-database=concourse \
+          --add-local-user admin:CubUlrenn \
+          --main-team-local-user admin \
+          --worker-work-dir /var/lib/concourse/worker \
+          --bind-ip 0.0.0.0 \
+          --bind-port 8081 \
+          --external-url=http://perrin.mildred.fr:8081
+
+        [Install]
+        WantedBy=multi-user.target
+
+
+  - copy:
+      dest: /etc/systemd/system/concourse-web.service
+      content: |
+        [Unit]
+        Description=Concourse Web
+        After=network.target postgresql-concourse.service
+        Requires=postgresql-concourse.service
+        Before=multi-user.target
+
+        [Service]
+        Type=simple
+        Restart=always
+        ExecStart=/usr/local/bin/concourse web \
+          --postgres-host=217.0.0.2 \
+          --postgres-user=concourse \
+          --postgres-password=concourse \
+          --postgres-database=concourse \
+          --add-local-user myuser:mypass \
+          --main-team-local-user myuser
+
+        [Install]
+        WantedBy=multi-user.target
+
+
+  - copy:
+      dest: /etc/systemd/system/concourse-worker.service
+      content: |
+        [Unit]
+        Description=Concourse Worker
+        After=network.target concourse-web.service
+        Requires=concourse-web.service
+        Before=multi-user.target
+
+        [Service]
+        Type=simple
+        Restart=always
+        ExecStart=/usr/local/bin/concourse worker \
+          --work-dir /var/lib/concourse/worker \
+          --tsa-host=127.0.0.1:2222
+
+        [Install]
+        WantedBy=multi-user.target
+
+  - copy:
+      dest: /etc/systemd/system/concourse-postgresql.service
+      content: |
+        [Unit]
+        Description=Postgresql for Concourse
+        After=network.target
+        Before=multi-user.target
+
+        [Service]
+        Type=simple
+        ExecStartPre=-/usr/bin/docker rm concourse-postgresql
+        ExecStart=/usr/bin/docker run --rm -i \
+          --name concourse-postgresql \
+          -v /var/lib/concourse/pgdata:/var/lib/postgresql/pgdata \
+          -e POSTGRES_USER=concourse \
+          -e POSTGRES_PASSWORD=concourse \
+          -p 127.0.0.2:5432:5432 \
+          postgres:9.4
+        ExecStop=/usr/bin/docker stop concourse-postgresql
+        Restart=always
+
+        [Install]
+        WantedBy=multi-user.target
+
+  - systemd:
+      name: concourse-quickstart
+      daemon_reload: yes
+      enabled: yes
+      state: started
+
+  - systemd:
+      name: concourse-web
+      daemon_reload: yes
+      enabled: no
+      state: stopped
+
+  - systemd:
+      name: concourse-worker
+      daemon_reload: yes
+      enabled: no
+      state: stopped
+
+  - systemd:
+      name: concourse-postgresql
+      daemon_reload: yes
+      enabled: yes
+      state: started
